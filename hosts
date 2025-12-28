@@ -1,0 +1,20 @@
+[nodes]
+node01 ansible_host=192.168.56.11
+node02 ansible_host=192.168.56.12
+
+[nodes:vars]
+ansible_user=vagrant
+ansible_ssh_pass=vagrant
+ansible_become=yes
+ansible_become_pass=vagrant
+
+[windows]
+winsrv ansible_host=192.168.56.20
+
+[windows:vars]
+ansible_user=vagrant
+ansible_password=vagrant
+ansible_connection=winrm
+ansible_winrm_server_cert_validation=ignore
+ansible_port=5985
+ansible_winrm_transport=ntlm

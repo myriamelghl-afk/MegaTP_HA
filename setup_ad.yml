@@ -1,0 +1,19 @@
+---
+- name: Installation Active Directory
+  hosts: all
+  tasks:
+    - name: Installer le role AD DS
+      win_feature:
+        name: AD-Domain-Services
+        state: present
+        include_management_tools: yes
+
+    - name: Promouvoir le serveur en Controleur de Domaine
+      win_domain:
+        dns_domain_name: btssio.com
+        safe_mode_password: "Password123!"
+      register: ad_promotion
+
+    - name: Redemarrer le serveur apres promotion
+      win_reboot:
+      when: ad_promotion.reboot_required

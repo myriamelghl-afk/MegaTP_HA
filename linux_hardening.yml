@@ -1,0 +1,34 @@
+---
+- name: Linux Hardening sur les nœuds RedHat
+  hosts: all
+  become: yes
+  tasks:
+    - name: Mettre à jour tous les paquets
+      yum:
+        name: '*'
+        state: latest
+
+    - name: Activer et configurer le firewall
+      firewalld:
+        service: ssh
+        permanent: yes
+        state: enabled
+      notify: reload firewall
+
+    - name: Désactiver la connexion root via SSH
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+      notify: restart ssh
+
+  handlers:
+    - name: reload firewall
+      service:
+        name: firewalld
+        state: reloaded
+
+    - name: restart ssh
+      service:
+        name: sshd
+        state: restarted

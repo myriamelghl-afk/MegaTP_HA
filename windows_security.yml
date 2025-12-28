@@ -1,0 +1,26 @@
+---
+- name: Hardening Windows Server
+  hosts: all
+  tasks:
+    - name: Desactiver le compte Invite
+      win_user:
+        name: Guest
+        account_disabled: yes
+
+    - name: Activer le Pare-feu Windows
+      win_shell: |
+        netsh advfirewall set allprofiles state on
+
+    - name: Desactiver SMBv1
+      win_shell: Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
+
+    - name: Desactiver LLMNR
+      win_regedit:
+        path: HKLM:\Software\Policies\Microsoft\Windows NT\DNSClient
+        name: EnableMulticast
+        data: 0
+        type: dword
+
+    - name: Definir la politique de mot de passe (PowerShell)
+      win_shell: |
+        Set-ADDefaultDomainPasswordPolicy -Identity "lab.local" -MinPasswordLength 12 -ComplexityEnabled $true

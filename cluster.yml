@@ -1,0 +1,94 @@
+---
+- name: "Mission 1 & 2 : Configuration Cluster HA et Sécurité"
+  hosts: linux_nodes
+  become: yes
+  tasks:
+    # --- PRÉPARATION DES DÉPÔTS ---
+    - name: Activer le depot HighAvailability
+      command: dnf config-manager --set-enabled highavailability
+      failed_when: false
+
+    - name: Installer les paquets requis (Cluster + Web + Samba)
+      dnf:
+        name: 
+          - pcs
+          - pacemaker
+          - corosync
+          - nginx
+          - samba
+          - firewalld
+          - python3-firewall
+        state: present
+        update_cache: yes
+
+    # --- MISSION 2 : SÉCURISATION (HARDENING) ---
+    - name: Demarrer et activer le Pare-feu
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: Configurer le Pare-feu (Ports cluster, Web, Samba, Zabbix)
+      ansible.posix.firewalld:
+        port: "{{ item }}"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      loop:
+        - 2224/tcp
+        - 3121/tcp
+        - 5404/udp
+        - 5405/udp
+        - 80/tcp
+        - 445/tcp
+        - 139/tcp
+        - 10050/tcp
+
+    - name: Desactiver la connexion SSH en root (Hardening)
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+      notify: Redemarrer SSH
+
+    - name: Activer les mises a jour automatiques de securite
+      dnf:
+        name: dnf-automatic
+        state: present
+
+    # --- MISSION 1 : CONFIGURATION DU CLUSTER ---
+    - name: Demarrer le service de configuration du cluster (pcsd)
+      ansible.builtin.service:
+        name: pcsd
+        state: started
+        enabled: yes
+
+    - name: Configurer le mot de passe pour l'utilisateur hacluster
+      user:
+        name: hacluster
+        password: "{{ 'password' | password_hash('sha512') }}"
+
+    - name: Authentifier les noeuds entre eux
+      command: "pcs host auth node01 node02 -u hacluster -p password"
+      when: inventory_hostname == "node01"
+
+    - name: Initialiser le cluster (setup)
+      command: "pcs cluster setup mycluster node01 node02 --force"
+      when: inventory_hostname == "node01"
+
+    - name: Demarrer le cluster sur tous les noeuds
+      command: "pcs cluster start --all"
+      when: inventory_hostname == "node01"
+
+    - name: Configurer les options du cluster (No STONITH pour le Lab)
+      command: "{{ item }}"
+      loop:
+        - "pcs property set stonith-enabled=false"
+        - "pcs property set no-quorum-policy=ignore"
+      when: inventory_hostname == "node01"
+
+  handlers:
+    - name: Redemarrer SSH
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
