@@ -49,3 +49,7 @@ Lancement : Exécuter vagrant up pour créer les 4 VMs.
 Configuration : Lancer le déploiement global avec ansible-playbook -i hosts site.yml.
 Vérification : Tester l'accès au service Web via la VIP sur 192.168.56.100.
 
+
+
+Ce Mega TP a été réalisé par :
+Myriam GHOUL et Youssef GOURAR
